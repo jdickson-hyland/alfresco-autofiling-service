@@ -2,6 +2,7 @@
 
 An Alfresco Content Services (ACS) platform module that automatically files uploaded documents into a destination folder path derived from their metadata. Inbox folders are monitored on a configurable schedule and documents are moved based on flexible, metadata-driven routing rules.
 
+![Autofiling Manager](./autofiling-rule-manager.png "AF Manager")
 ---
 
 ## How it works
@@ -27,6 +28,8 @@ Characters that are invalid in folder names (`\ : * ? " < > |`) are stripped fro
 ---
 
 ## Example rule
+
+![Rule Editing](./rule-editing.png "Rule Editing")
 
 The following rule files documents of type `acme:invoice` that land in `/Company Home/Inbox` into a year/month/vendor folder hierarchy under `/Company Home/Finance/Invoices`.
 
