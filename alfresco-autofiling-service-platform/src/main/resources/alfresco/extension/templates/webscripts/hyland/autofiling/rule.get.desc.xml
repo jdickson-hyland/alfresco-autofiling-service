@@ -1,0 +1,9 @@
+<webscript>
+    <shortname>Get Autofiling Rule</shortname>
+    <description>Returns a single autofiling rule by NodeRef</description>
+    <url>/hyland/autofiling/rules/{storeType}/{storeId}/{nodeId}</url>
+    <format default="json">extension</format>
+    <authentication>admin</authentication>
+    <transaction allow="readonly">required</transaction>
+    <family>Hyland Autofiling Service</family>
+</webscript>

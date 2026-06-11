@@ -1,0 +1,9 @@
+<webscript>
+    <shortname>Run Autofiling Rule Now</shortname>
+    <description>Immediately triggers inbox scanning and filing for a specific rule</description>
+    <url>/hyland/autofiling/rules/{storeType}/{storeId}/{nodeId}/run</url>
+    <format default="json">extension</format>
+    <authentication>admin</authentication>
+    <transaction>required</transaction>
+    <family>Hyland Autofiling Service</family>
+</webscript>

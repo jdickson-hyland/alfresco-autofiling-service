@@ -1,0 +1,9 @@
+<webscript>
+    <shortname>Delete Autofiling Rule</shortname>
+    <description>Permanently deletes an autofiling rule</description>
+    <url>/hyland/autofiling/rules/{storeType}/{storeId}/{nodeId}</url>
+    <format default="json">extension</format>
+    <authentication>admin</authentication>
+    <transaction>required</transaction>
+    <family>Hyland Autofiling Service</family>
+</webscript>

@@ -1,0 +1,9 @@
+<webscript>
+    <shortname>List Autofiling Rules</shortname>
+    <description>Returns all autofiling rules stored in the Data Dictionary</description>
+    <url>/hyland/autofiling/rules</url>
+    <format default="json">extension</format>
+    <authentication>admin</authentication>
+    <transaction allow="readonly">required</transaction>
+    <family>Hyland Autofiling Service</family>
+</webscript>

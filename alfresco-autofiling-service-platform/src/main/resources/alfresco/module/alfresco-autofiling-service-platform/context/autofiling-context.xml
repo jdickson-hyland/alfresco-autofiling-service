@@ -1,0 +1,129 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+          http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+
+    <!-- ===== Core Services ===== -->
+
+    <bean id="folderPathService"
+          class="org.hyland.com.autofiling.service.FolderPathServiceImpl">
+        <property name="nodeService"        ref="NodeService"/>
+        <property name="nodeLocatorService" ref="nodeLocatorService"/>
+    </bean>
+
+    <bean id="pathResolver"
+          class="org.hyland.com.autofiling.service.PathResolver">
+        <property name="nodeService"      ref="NodeService"/>
+        <property name="namespaceService" ref="NamespaceService"/>
+    </bean>
+
+    <bean id="autofilingRuleService"
+          class="org.hyland.com.autofiling.service.AutofilingRuleServiceImpl">
+        <property name="nodeService"      ref="NodeService"/>
+        <property name="contentService"   ref="ContentService"/>
+        <property name="namespaceService" ref="NamespaceService"/>
+    </bean>
+
+    <bean id="autofilingService"
+          class="org.hyland.com.autofiling.service.AutofilingServiceImpl">
+        <property name="ruleService"        ref="autofilingRuleService"/>
+        <property name="pathResolver"       ref="pathResolver"/>
+        <property name="folderPathService"  ref="folderPathService"/>
+        <property name="nodeService"        ref="NodeService"/>
+        <property name="fileFolderService"  ref="FileFolderService"/>
+        <property name="dictionaryService"  ref="DictionaryService"/>
+        <property name="namespaceService"   ref="NamespaceService"/>
+        <property name="transactionService" ref="TransactionService"/>
+        <property name="minimumAgeMs"       value="${autofiling.minimum.age.ms}"/>
+    </bean>
+
+    <!-- ===== Bootstrap ===== -->
+
+    <bean id="autofilingBootstrap"
+          class="org.hyland.com.autofiling.bootstrap.AutofilingBootstrap"
+          parent="module.baseComponent"
+          depends-on="alfresco-autofiling-service-platform.dictionaryBootstrap">
+        <property name="moduleId"           value="${project.artifactId}"/>
+        <property name="name"               value="AutofilingBootstrap"/>
+        <property name="description"        value="Ensures the Autofiling Rules folder exists in the Data Dictionary"/>
+        <property name="sinceVersion"       value="1.0"/>
+        <property name="appliesFromVersion" value="1.0"/>
+        <property name="ruleService"        ref="autofilingRuleService"/>
+    </bean>
+
+    <!-- ===== Scheduled Job ===== -->
+
+    <bean id="autofilingJobWorker"
+          class="org.hyland.com.autofiling.job.AutofilingJobWorker">
+        <property name="autofilingService" ref="autofilingService"/>
+    </bean>
+
+    <bean id="autofilingJobDetail"
+          class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+        <property name="jobClass" value="org.hyland.com.autofiling.job.AutofilingJob"/>
+        <property name="jobDataAsMap">
+            <map>
+                <entry key="worker"         value-ref="autofilingJobWorker"/>
+                <entry key="jobLockService" value-ref="JobLockService"/>
+            </map>
+        </property>
+    </bean>
+
+    <bean id="autofilingCronTrigger"
+          class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="jobDetail"      ref="autofilingJobDetail"/>
+        <property name="cronExpression" value="${autofiling.schedule.cron}"/>
+        <property name="startDelay"     value="300000"/>
+    </bean>
+
+    <bean class="org.springframework.scheduling.quartz.SchedulerAccessorBean">
+        <property name="scheduler" ref="schedulerFactory"/>
+        <property name="triggers">
+            <list>
+                <ref bean="autofilingCronTrigger"/>
+            </list>
+        </property>
+    </bean>
+
+    <!-- ===== Web Scripts ===== -->
+    <!-- Bean ID convention: webscript.<url-path-with-dots>.<method> -->
+
+    <bean id="webscript.hyland.autofiling.rules.get"
+          class="org.hyland.com.autofiling.webscript.RulesListWebScript"
+          parent="webscript">
+        <property name="ruleService" ref="autofilingRuleService"/>
+    </bean>
+
+    <bean id="webscript.hyland.autofiling.rules.post"
+          class="org.hyland.com.autofiling.webscript.RuleCreateWebScript"
+          parent="webscript">
+        <property name="ruleService" ref="autofilingRuleService"/>
+    </bean>
+
+    <bean id="webscript.hyland.autofiling.rule.get"
+          class="org.hyland.com.autofiling.webscript.RuleGetWebScript"
+          parent="webscript">
+        <property name="ruleService" ref="autofilingRuleService"/>
+    </bean>
+
+    <bean id="webscript.hyland.autofiling.rule.put"
+          class="org.hyland.com.autofiling.webscript.RuleUpdateWebScript"
+          parent="webscript">
+        <property name="ruleService" ref="autofilingRuleService"/>
+    </bean>
+
+    <bean id="webscript.hyland.autofiling.rule.delete"
+          class="org.hyland.com.autofiling.webscript.RuleDeleteWebScript"
+          parent="webscript">
+        <property name="ruleService" ref="autofilingRuleService"/>
+    </bean>
+
+    <bean id="webscript.hyland.autofiling.rule-run.post"
+          class="org.hyland.com.autofiling.webscript.RuleRunWebScript"
+          parent="webscript">
+        <property name="ruleService"       ref="autofilingRuleService"/>
+        <property name="autofilingService" ref="autofilingService"/>
+    </bean>
+
+</beans>

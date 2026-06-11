@@ -1,0 +1,9 @@
+<webscript>
+    <shortname>Update Autofiling Rule</shortname>
+    <description>Updates an existing autofiling rule. Body: AutofilingRule JSON.</description>
+    <url>/hyland/autofiling/rules/{storeType}/{storeId}/{nodeId}</url>
+    <format default="json">extension</format>
+    <authentication>admin</authentication>
+    <transaction>required</transaction>
+    <family>Hyland Autofiling Service</family>
+</webscript>

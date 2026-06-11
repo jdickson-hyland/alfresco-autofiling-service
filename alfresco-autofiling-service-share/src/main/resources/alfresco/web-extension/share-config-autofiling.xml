@@ -1,0 +1,16 @@
+<alfresco-config>
+
+    <!-- Register Autofiling Rule Manager in the Share Admin Console sidebar.
+         label/description are i18n keys resolved as tool.{scriptName}.label by console.js,
+         where scriptName = web script path with "/" replaced by "-" = autofiling-admin. -->
+    <config evaluator="string-compare" condition="AdminConsole">
+        <tools>
+            <tool id="autofiling"
+                  label="tool.autofiling-admin.label"
+                  description="tool.autofiling-admin.description"
+                  url="/page/hdp/ws/hyland/autofiling/admin"/>
+        </tools>
+    </config>
+
+</alfresco-config>
+

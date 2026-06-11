@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model name="afi:autofilingModel" xmlns="http://www.alfresco.org/model/dictionary/1.0">
+
+    <description>Hyland Autofiling Service Content Model</description>
+    <author>Hyland</author>
+    <version>1.0</version>
+
+    <imports>
+        <import uri="http://www.alfresco.org/model/dictionary/1.0" prefix="d"/>
+        <import uri="http://www.alfresco.org/model/content/1.0" prefix="cm"/>
+    </imports>
+
+    <namespaces>
+        <namespace uri="http://www.hyland.com/model/autofiling/1.0" prefix="afi"/>
+    </namespaces>
+
+    <aspects>
+        <aspect name="afi:autofilingRule">
+            <title>Autofiling Rule</title>
+            <description>Applied to autofiling rule nodes stored in the Data Dictionary</description>
+            <properties>
+                <property name="afi:enabled">
+                    <title>Enabled</title>
+                    <type>d:boolean</type>
+                    <mandatory>false</mandatory>
+                    <default>true</default>
+                </property>
+                <property name="afi:inboxPath">
+                    <title>Inbox Path</title>
+                    <type>d:text</type>
+                    <mandatory>false</mandatory>
+                </property>
+                <property name="afi:contentType">
+                    <title>Content Types</title>
+                    <type>d:text</type>
+                    <mandatory>false</mandatory>
+                    <multiple>true</multiple>
+                </property>
+                <property name="afi:priority">
+                    <title>Priority</title>
+                    <type>d:int</type>
+                    <mandatory>false</mandatory>
+                    <default>10</default>
+                </property>
+            </properties>
+        </aspect>
+    </aspects>
+
+</model>

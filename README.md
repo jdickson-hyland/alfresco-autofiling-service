@@ -107,14 +107,22 @@ curl -u admin:admin -X POST \
 
 ## Configuration
 
-The cron schedule is controlled by a property in `alfresco-global.properties`:
+Set these properties in `alfresco-global.properties` (or the Docker dev override):
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `autofiling.schedule.cron` | `0 0/1 * * * ?` | Quartz cron expression controlling how often the job runs. Default is every minute. |
+| `autofiling.minimum.age.ms` | `10000` | Minimum time in milliseconds since a document's `cm:modified` timestamp before it is eligible for filing. Prevents moving documents that are still being uploaded. |
 
 ```properties
-# Default: every minute
+# Run every minute (default)
 autofiling.schedule.cron=0 0/1 * * * ?
+
+# Skip documents modified less than 10 seconds ago (default)
+autofiling.minimum.age.ms=10000
 ```
 
-The Docker development environment overrides this to every 2 minutes. To trigger filing without waiting, use the `/run` endpoint.
+The Docker development environment overrides the cron to every 2 minutes. To trigger filing immediately without waiting for the schedule, use the `/run` endpoint.
 
 ---
 

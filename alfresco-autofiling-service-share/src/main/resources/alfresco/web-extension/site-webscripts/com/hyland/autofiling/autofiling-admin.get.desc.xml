@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<webscript>
+    <shortname>Autofiling Rule Manager</shortname>
+    <description>Admin UI for creating and managing autofiling rules</description>
+    <url>/hyland/autofiling/admin</url>
+    <authentication>admin</authentication>
+    <family>admin-console</family>
+    <format default="html">any</format>
+</webscript>

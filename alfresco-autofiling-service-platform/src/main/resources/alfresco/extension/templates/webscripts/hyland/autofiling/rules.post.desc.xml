@@ -1,0 +1,9 @@
+<webscript>
+    <shortname>Create Autofiling Rule</shortname>
+    <description>Creates a new autofiling rule in the Data Dictionary. Body: AutofilingRule JSON.</description>
+    <url>/hyland/autofiling/rules</url>
+    <format default="json">extension</format>
+    <authentication>admin</authentication>
+    <transaction>required</transaction>
+    <family>Hyland Autofiling Service</family>
+</webscript>
