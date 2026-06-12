@@ -11,6 +11,7 @@ import org.alfresco.service.cmr.repository.NodeService;
 import org.alfresco.service.cmr.repository.StoreRef;
 import org.alfresco.service.namespace.NamespaceService;
 import org.alfresco.service.namespace.QName;
+import org.alfresco.service.transaction.TransactionService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hyland.com.autofiling.model.AutofilingModel;
@@ -29,104 +30,126 @@ public class AutofilingRuleServiceImpl implements AutofilingRuleService {
     private NodeService nodeService;
     private ContentService contentService;
     private NamespaceService namespaceService;
+    private TransactionService transactionService;
 
     public void setNodeService(NodeService nodeService) { this.nodeService = nodeService; }
     public void setContentService(ContentService contentService) { this.contentService = contentService; }
     public void setNamespaceService(NamespaceService namespaceService) { this.namespaceService = namespaceService; }
+    public void setTransactionService(TransactionService transactionService) { this.transactionService = transactionService; }
 
     @Override
     public NodeRef createRule(AutofilingRule rule) {
-        return AuthenticationUtil.runAsSystem(() -> {
-            NodeRef rulesFolder = getOrCreateRulesFolder();
+        LOG.info("Creating autofiling rule: " + rule.getName());
+        return transactionService.getRetryingTransactionHelper().doInTransaction(() ->
+            AuthenticationUtil.runAsSystem(() -> {
+                NodeRef rulesFolder = getOrCreateRulesFolder();
 
-            Map<QName, Serializable> props = new HashMap<>();
-            props.put(ContentModel.PROP_NAME, rule.getName());
-            props.put(ContentModel.PROP_TITLE, rule.getName());
-            props.put(ContentModel.PROP_DESCRIPTION, rule.getDescription() != null ? rule.getDescription() : "");
+                Map<QName, Serializable> props = new HashMap<>();
+                props.put(ContentModel.PROP_NAME, rule.getName() + ".json");
+                props.put(ContentModel.PROP_TITLE, rule.getName());
+                props.put(ContentModel.PROP_DESCRIPTION, rule.getDescription() != null ? rule.getDescription() : "");
 
-            QName assocQName = QName.createQName(
-                NamespaceService.CONTENT_MODEL_1_0_URI,
-                QName.createValidLocalName(rule.getName())
-            );
-            ChildAssociationRef assoc = nodeService.createNode(
-                rulesFolder,
-                ContentModel.ASSOC_CONTAINS,
-                assocQName,
-                ContentModel.TYPE_CONTENT,
-                props
-            );
-            NodeRef nodeRef = assoc.getChildRef();
+                QName assocQName = QName.createQName(
+                    NamespaceService.CONTENT_MODEL_1_0_URI,
+                    QName.createValidLocalName(rule.getName())
+                );
+                ChildAssociationRef assoc = nodeService.createNode(
+                    rulesFolder,
+                    ContentModel.ASSOC_CONTAINS,
+                    assocQName,
+                    ContentModel.TYPE_CONTENT,
+                    props
+                );
+                NodeRef nodeRef = assoc.getChildRef();
 
-            applyAspect(nodeRef, rule);
-            writeJsonContent(nodeRef, rule);
+                applyAspect(nodeRef, rule);
+                writeJsonContent(nodeRef, rule);
 
-            return nodeRef;
-        });
+                LOG.debug("Rule created: '" + rule.getName() + "' (" + nodeRef + ")");
+                return nodeRef;
+            }), false);
     }
 
     @Override
     public void updateRule(NodeRef nodeRef, AutofilingRule rule) {
-        AuthenticationUtil.runAsSystem(() -> {
-            nodeService.setProperty(nodeRef, ContentModel.PROP_NAME, rule.getName());
-            nodeService.setProperty(nodeRef, ContentModel.PROP_TITLE, rule.getName());
-            nodeService.setProperty(nodeRef, ContentModel.PROP_DESCRIPTION,
-                rule.getDescription() != null ? rule.getDescription() : "");
-            applyAspect(nodeRef, rule);
-            writeJsonContent(nodeRef, rule);
-            return null;
-        });
+        LOG.info("Updating autofiling rule: " + nodeRef + " ('" + rule.getName() + "')");
+        transactionService.getRetryingTransactionHelper().doInTransaction(() ->
+            AuthenticationUtil.runAsSystem(() -> {
+                nodeService.setProperty(nodeRef, ContentModel.PROP_NAME, rule.getName() + ".json");
+                nodeService.setProperty(nodeRef, ContentModel.PROP_TITLE, rule.getName());
+                nodeService.setProperty(nodeRef, ContentModel.PROP_DESCRIPTION,
+                    rule.getDescription() != null ? rule.getDescription() : "");
+                applyAspect(nodeRef, rule);
+                writeJsonContent(nodeRef, rule);
+                LOG.debug("Rule updated: " + nodeRef);
+                return null;
+            }), false);
     }
 
     @Override
     public AutofilingRule getRule(NodeRef nodeRef) {
-        return AuthenticationUtil.runAsSystem(() -> buildRule(nodeRef));
+        return transactionService.getRetryingTransactionHelper().doInTransaction(() ->
+            AuthenticationUtil.runAsSystem(() -> buildRule(nodeRef)), true);
     }
 
     @Override
     public List<AutofilingRule> listRules() {
-        return AuthenticationUtil.runAsSystem(() -> {
-            NodeRef folder = getOrCreateRulesFolder();
-            List<ChildAssociationRef> children = nodeService.getChildAssocs(folder);
-            List<AutofilingRule> result = new ArrayList<>();
-            for (ChildAssociationRef child : children) {
-                NodeRef childRef = child.getChildRef();
-                if (nodeService.hasAspect(childRef, AutofilingModel.ASPECT_AUTOFILING_RULE)) {
-                    result.add(buildRule(childRef));
-                }
-            }
-            result.sort((a, b) -> Integer.compare(a.getPriority(), b.getPriority()));
-            return result;
-        });
+        return transactionService.getRetryingTransactionHelper().doInTransaction(() ->
+            AuthenticationUtil.runAsSystem(() -> {
+                List<AutofilingRule> result = listRulesInternal();
+                LOG.debug("listRules: found " + result.size() + " rule(s)");
+                return result;
+            }), true);
     }
 
     @Override
     public List<AutofilingRule> listEnabledRules() {
-        return AuthenticationUtil.runAsSystem(() -> {
-            List<AutofilingRule> all = listRules();
-            List<AutofilingRule> enabled = new ArrayList<>();
-            for (AutofilingRule rule : all) {
-                if (rule.isEnabled()) {
-                    enabled.add(rule);
+        return transactionService.getRetryingTransactionHelper().doInTransaction(() ->
+            AuthenticationUtil.runAsSystem(() -> {
+                List<AutofilingRule> all = listRulesInternal();
+                List<AutofilingRule> enabled = new ArrayList<>();
+                for (AutofilingRule rule : all) {
+                    if (rule.isEnabled()) {
+                        enabled.add(rule);
+                    }
                 }
-            }
-            return enabled;
-        });
+                LOG.debug("listEnabledRules: " + enabled.size() + " of " + all.size() + " rule(s) enabled");
+                return enabled;
+            }), true);
     }
 
     @Override
     public void deleteRule(NodeRef nodeRef) {
-        AuthenticationUtil.runAsSystem(() -> {
-            nodeService.deleteNode(nodeRef);
-            return null;
-        });
+        LOG.info("Deleting autofiling rule: " + nodeRef);
+        transactionService.getRetryingTransactionHelper().doInTransaction(() ->
+            AuthenticationUtil.runAsSystem(() -> {
+                nodeService.deleteNode(nodeRef);
+                LOG.debug("Rule deleted: " + nodeRef);
+                return null;
+            }), false);
     }
 
     @Override
     public void ensureRulesFolder() {
-        AuthenticationUtil.runAsSystem(() -> {
-            getOrCreateRulesFolder();
-            return null;
-        });
+        transactionService.getRetryingTransactionHelper().doInTransaction(() ->
+            AuthenticationUtil.runAsSystem(() -> {
+                getOrCreateRulesFolder();
+                return null;
+            }), false);
+    }
+
+    private List<AutofilingRule> listRulesInternal() {
+        NodeRef folder = getOrCreateRulesFolder();
+        List<ChildAssociationRef> children = nodeService.getChildAssocs(folder);
+        List<AutofilingRule> result = new ArrayList<>();
+        for (ChildAssociationRef child : children) {
+            NodeRef childRef = child.getChildRef();
+            if (nodeService.hasAspect(childRef, AutofilingModel.ASPECT_AUTOFILING_RULE)) {
+                result.add(buildRule(childRef));
+            }
+        }
+        result.sort((a, b) -> Integer.compare(a.getPriority(), b.getPriority()));
+        return result;
     }
 
     NodeRef getOrCreateRulesFolder() {

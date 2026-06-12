@@ -5,7 +5,8 @@
       "Bash(mvn test *)",
       "Read(//Users/james.dickson/projects/alfresco-sdk-projects/alfresco-smartfolder-manager/alfresco-smartfolder-manager-share/src/main/resources/alfresco/web-extension/**)",
       "Bash(find /Users/james.dickson/projects/alfresco-sdk-projects/alfresco-counters/alfresco-counters-share/src -type f | sort)",
-      "Read(//Users/james.dickson/projects/alfresco-sdk-projects/alfresco-counters/alfresco-counters-share/src/**)"
+      "Read(//Users/james.dickson/projects/alfresco-sdk-projects/alfresco-counters/alfresco-counters-share/src/**)",
+      "Bash(mvn compile *)"
     ]
   }
 }

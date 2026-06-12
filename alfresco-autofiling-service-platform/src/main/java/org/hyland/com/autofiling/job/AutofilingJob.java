@@ -41,8 +41,10 @@ public class AutofilingJob implements Job {
             return;
         }
 
+        LOG.info("Autofiling job acquired lock — starting execution");
         try {
             worker.execute();
+            LOG.info("Autofiling job execution complete");
         } finally {
             try {
                 jobLockService.releaseLock(lockToken, LOCK_QNAME);

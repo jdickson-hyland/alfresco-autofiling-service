@@ -61,7 +61,9 @@ public class PathResolver {
         }
         matcher.appendTail(result);
 
-        return result.toString();
+        String resolved = result.toString();
+        LOG.debug("Resolved template '" + template + "' → '" + resolved + "' for " + nodeRef);
+        return resolved;
     }
 
     private String resolveToken(String propRef, String modifier, NodeRef nodeRef) {

@@ -20,9 +20,10 @@
 
     <bean id="autofilingRuleService"
           class="org.hyland.com.autofiling.service.AutofilingRuleServiceImpl">
-        <property name="nodeService"      ref="NodeService"/>
-        <property name="contentService"   ref="ContentService"/>
-        <property name="namespaceService" ref="NamespaceService"/>
+        <property name="nodeService"         ref="NodeService"/>
+        <property name="contentService"      ref="ContentService"/>
+        <property name="namespaceService"    ref="NamespaceService"/>
+        <property name="transactionService"  ref="TransactionService"/>
     </bean>
 
     <bean id="autofilingService"
@@ -36,6 +37,7 @@
         <property name="namespaceService"   ref="NamespaceService"/>
         <property name="transactionService" ref="TransactionService"/>
         <property name="minimumAgeMs"       value="${autofiling.minimum.age.ms}"/>
+        <property name="maxBatchSize"       value="${autofiling.max.batch.size}"/>
     </bean>
 
     <!-- ===== Bootstrap ===== -->

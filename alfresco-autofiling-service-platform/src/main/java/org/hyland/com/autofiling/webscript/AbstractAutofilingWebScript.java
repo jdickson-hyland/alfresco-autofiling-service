@@ -1,6 +1,8 @@
 package org.hyland.com.autofiling.webscript;
 
 import org.alfresco.service.cmr.repository.NodeRef;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.extensions.webscripts.AbstractWebScript;
 import org.springframework.extensions.webscripts.WebScriptRequest;
 import org.springframework.extensions.webscripts.WebScriptResponse;
@@ -10,6 +12,8 @@ import java.util.Map;
 
 abstract class AbstractAutofilingWebScript extends AbstractWebScript {
 
+    private static final Log LOG = LogFactory.getLog(AbstractAutofilingWebScript.class);
+
     protected void writeJson(WebScriptResponse res, String json) throws IOException {
         res.setContentType("application/json");
         res.setContentEncoding("UTF-8");
@@ -17,6 +21,7 @@ abstract class AbstractAutofilingWebScript extends AbstractWebScript {
     }
 
     protected void writeError(WebScriptResponse res, int status, String message) throws IOException {
+        LOG.warn(getClass().getSimpleName() + " — HTTP " + status + ": " + message);
         res.setContentType("application/json");
         res.setContentEncoding("UTF-8");
         res.setStatus(status);

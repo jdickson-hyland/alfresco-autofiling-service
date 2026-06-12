@@ -1,6 +1,8 @@
 package org.hyland.com.autofiling.webscript;
 
 import org.alfresco.service.cmr.repository.NodeRef;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.hyland.com.autofiling.service.AutofilingRuleService;
 import org.springframework.extensions.webscripts.WebScriptRequest;
 import org.springframework.extensions.webscripts.WebScriptResponse;
@@ -8,6 +10,8 @@ import org.springframework.extensions.webscripts.WebScriptResponse;
 import java.io.IOException;
 
 public class RuleDeleteWebScript extends AbstractAutofilingWebScript {
+
+    private static final Log LOG = LogFactory.getLog(RuleDeleteWebScript.class);
 
     private AutofilingRuleService ruleService;
 
@@ -21,7 +25,9 @@ public class RuleDeleteWebScript extends AbstractAutofilingWebScript {
             return;
         }
 
+        LOG.debug("DELETE rule: " + nodeRef);
         ruleService.deleteRule(nodeRef);
+        LOG.info("DELETE rule — deleted " + nodeRef);
         writeJson(res, "{\"deleted\":true}");
     }
 }

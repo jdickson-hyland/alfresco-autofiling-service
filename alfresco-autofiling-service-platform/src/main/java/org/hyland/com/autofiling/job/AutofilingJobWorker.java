@@ -16,11 +16,11 @@ public class AutofilingJobWorker {
     }
 
     public void execute() {
-        LOG.debug("Autofiling job starting");
+        LOG.info("Autofiling job starting");
         AuthenticationUtil.runAsSystem(() -> {
             autofilingService.processAllRules();
             return null;
         });
-        LOG.debug("Autofiling job complete");
+        LOG.info("Autofiling job complete");
     }
 }

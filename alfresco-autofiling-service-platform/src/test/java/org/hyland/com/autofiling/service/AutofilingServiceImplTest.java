@@ -61,7 +61,12 @@ public class AutofilingServiceImplTest {
 
         // Wire retrying transaction helper to execute callbacks inline
         when(transactionService.getRetryingTransactionHelper()).thenReturn(retryingTransactionHelper);
-        when(retryingTransactionHelper.doInTransaction(any(), eq(false), eq(true)))
+        when(retryingTransactionHelper.doInTransaction(any(), anyBoolean()))
+            .thenAnswer(inv -> {
+                RetryingTransactionHelper.RetryingTransactionCallback<?> cb = inv.getArgument(0);
+                return cb.execute();
+            });
+        when(retryingTransactionHelper.doInTransaction(any(), anyBoolean(), anyBoolean()))
             .thenAnswer(inv -> {
                 RetryingTransactionHelper.RetryingTransactionCallback<?> cb = inv.getArgument(0);
                 return cb.execute();
