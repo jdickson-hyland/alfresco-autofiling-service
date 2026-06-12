@@ -113,9 +113,10 @@ curl -u admin:admin -X POST \
 Set these properties in `alfresco-global.properties` (or the Docker dev override):
 
 | Property | Default | Description |
-|----------|---------|-------------|
+| -------- | ------- | ----------- |
 | `autofiling.schedule.cron` | `0 0/1 * * * ?` | Quartz cron expression controlling how often the job runs. Default is every minute. |
 | `autofiling.minimum.age.ms` | `10000` | Minimum time in milliseconds since a document's `cm:modified` timestamp before it is eligible for filing. Prevents moving documents that are still being uploaded. |
+| `autofiling.max.batch.size` | `100` | Maximum documents to file per rule per job run. Remaining documents are deferred to the next run, preventing long transactions on large inboxes. |
 
 ```properties
 # Run every minute (default)
@@ -123,6 +124,9 @@ autofiling.schedule.cron=0 0/1 * * * ?
 
 # Skip documents modified less than 10 seconds ago (default)
 autofiling.minimum.age.ms=10000
+
+# File at most 100 documents per rule per run (default)
+autofiling.max.batch.size=100
 ```
 
 The Docker development environment overrides the cron to every 2 minutes. To trigger filing immediately without waiting for the schedule, use the `/run` endpoint.
@@ -151,6 +155,34 @@ The Docker development environment overrides the cron to every 2 minutes. To tri
 The environment starts at:
 - ACS / REST API: http://localhost:8080/alfresco
 - Share: http://localhost:8180/share
+
+---
+
+## Logging
+
+All classes use Apache Commons Logging (backed by Log4j 2 in the Docker environment). The logger hierarchy follows the Java package structure, so log levels can be tuned per package in `log4j2.properties` or `alfresco-global.properties`.
+
+| Logger | Level | Events |
+| ------ | ----- | ------ |
+| `org.hyland.com.autofiling.job.AutofilingJob` | INFO | Lock acquired, execution complete |
+| `org.hyland.com.autofiling.job.AutofilingJobWorker` | INFO | Job start / complete |
+| `org.hyland.com.autofiling.bootstrap.AutofilingBootstrap` | INFO | Bootstrap start / complete |
+| `org.hyland.com.autofiling.service.AutofilingServiceImpl` | INFO | Enabled rule count, per-rule filed count |
+| `org.hyland.com.autofiling.service.AutofilingServiceImpl` | DEBUG | Per-rule entry, batch limit reached, document skipped (age/already moved) |
+| `org.hyland.com.autofiling.service.AutofilingRuleServiceImpl` | INFO | Rule created / updated / deleted |
+| `org.hyland.com.autofiling.service.AutofilingRuleServiceImpl` | DEBUG | Node refs, list counts |
+| `org.hyland.com.autofiling.service.PathResolver` | DEBUG | Resolved template → path per document |
+| `org.hyland.com.autofiling.service.FolderPathServiceImpl` | DEBUG | Folders created during path resolution |
+| `org.hyland.com.autofiling.webscript.*` | INFO | Mutating API calls (create, update, delete, run) |
+| `org.hyland.com.autofiling.webscript.*` | DEBUG | Read API calls (get, list) |
+| `org.hyland.com.autofiling.webscript.AbstractAutofilingWebScript` | WARN | All 4xx error responses (includes HTTP status and message) |
+
+To enable DEBUG logging for the entire module, add to `alfresco-global.properties`:
+
+```properties
+log4j2.logger.autofiling.name=org.hyland.com.autofiling
+log4j2.logger.autofiling.level=DEBUG
+```
 
 ---
 

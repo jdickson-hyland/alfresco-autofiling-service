@@ -29,6 +29,7 @@ public class AutofilingServiceImpl implements AutofilingService {
     private static final Log LOG = LogFactory.getLog(AutofilingServiceImpl.class);
 
     private static final long DEFAULT_MINIMUM_AGE_MS = TimeUnit.SECONDS.toMillis(10);
+    private static final int DEFAULT_MAX_BATCH_SIZE = 100;
 
     private AutofilingRuleService ruleService;
     private PathResolver pathResolver;
@@ -39,6 +40,7 @@ public class AutofilingServiceImpl implements AutofilingService {
     private NamespaceService namespaceService;
     private TransactionService transactionService;
     private long minimumAgeMs = DEFAULT_MINIMUM_AGE_MS;
+    private int maxBatchSize = DEFAULT_MAX_BATCH_SIZE;
 
     public void setRuleService(AutofilingRuleService ruleService) { this.ruleService = ruleService; }
     public void setPathResolver(PathResolver pathResolver) { this.pathResolver = pathResolver; }
@@ -49,6 +51,7 @@ public class AutofilingServiceImpl implements AutofilingService {
     public void setNamespaceService(NamespaceService namespaceService) { this.namespaceService = namespaceService; }
     public void setTransactionService(TransactionService transactionService) { this.transactionService = transactionService; }
     public void setMinimumAgeMs(long minimumAgeMs) { this.minimumAgeMs = minimumAgeMs; }
+    public void setMaxBatchSize(int maxBatchSize) { this.maxBatchSize = maxBatchSize; }
 
     @Override
     public void processAllRules() {
@@ -58,6 +61,7 @@ public class AutofilingServiceImpl implements AutofilingService {
             return;
         }
 
+        LOG.info("Processing " + rules.size() + " enabled rule(s)");
         // Track nodes already moved this run so a node is not filed twice by overlapping rules
         Set<NodeRef> movedNodes = new HashSet<>();
         for (AutofilingRule rule : rules) {
@@ -75,48 +79,59 @@ public class AutofilingServiceImpl implements AutofilingService {
     }
 
     private void processRuleInternal(AutofilingRule rule, Set<NodeRef> movedNodes) {
-        AuthenticationUtil.runAsSystem(() -> {
-            NodeRef inboxRef = folderPathService.getOrCreatePath(rule.getInboxPath(), false);
-            if (inboxRef == null) {
-                LOG.warn("Inbox folder not found for rule '" + rule.getName() + "': " + rule.getInboxPath());
+        LOG.debug("Processing rule '" + rule.getName() + "' — inbox: " + rule.getInboxPath());
+        transactionService.getRetryingTransactionHelper().doInTransaction(() -> {
+            AuthenticationUtil.runAsSystem(() -> {
+                NodeRef inboxRef = folderPathService.getOrCreatePath(rule.getInboxPath(), false);
+                if (inboxRef == null) {
+                    LOG.warn("Inbox folder not found for rule '" + rule.getName() + "': " + rule.getInboxPath());
+                    return null;
+                }
+
+                List<ChildAssociationRef> children = nodeService.getChildAssocs(
+                    inboxRef, ContentModel.ASSOC_CONTAINS, RegexQNamePattern.MATCH_ALL);
+
+                int filedCount = 0;
+                for (ChildAssociationRef child : children) {
+                    if (filedCount >= maxBatchSize) {
+                        LOG.debug("Batch limit of " + maxBatchSize + " reached for rule '" + rule.getName() + "' — deferring remaining documents to next run");
+                        break;
+                    }
+                    NodeRef childRef = child.getChildRef();
+                    if (movedNodes.contains(childRef)) {
+                        continue;
+                    }
+                    if (!nodeService.exists(childRef)) {
+                        continue;
+                    }
+                    if (!isContent(childRef)) {
+                        continue;
+                    }
+                    if (!contentTypesMatch(childRef, rule)) {
+                        continue;
+                    }
+                    if (!isOldEnough(childRef)) {
+                        LOG.debug("Skipping " + childRef + " — modified less than " + minimumAgeMs + " ms ago");
+                        continue;
+                    }
+
+                    final NodeRef docRef = childRef;
+                    try {
+                        transactionService.getRetryingTransactionHelper().doInTransaction(() -> {
+                            fileDocument(docRef, rule);
+                            movedNodes.add(docRef);
+                            return null;
+                        }, false, true);
+                        filedCount++;
+                    } catch (Exception e) {
+                        LOG.error("Failed to file document " + docRef + " with rule '" + rule.getName() + "'", e);
+                    }
+                }
+                LOG.info("Rule '" + rule.getName() + "' complete — filed " + filedCount + " document(s)");
                 return null;
-            }
-
-            List<ChildAssociationRef> children = nodeService.getChildAssocs(
-                inboxRef, ContentModel.ASSOC_CONTAINS, RegexQNamePattern.MATCH_ALL);
-
-            for (ChildAssociationRef child : children) {
-                NodeRef childRef = child.getChildRef();
-                if (movedNodes.contains(childRef)) {
-                    continue;
-                }
-                if (!nodeService.exists(childRef)) {
-                    continue;
-                }
-                if (!isContent(childRef)) {
-                    continue;
-                }
-                if (!contentTypesMatch(childRef, rule)) {
-                    continue;
-                }
-                if (!isOldEnough(childRef)) {
-                    LOG.debug("Skipping " + childRef + " — modified less than " + minimumAgeMs + " ms ago");
-                    continue;
-                }
-
-                final NodeRef docRef = childRef;
-                try {
-                    transactionService.getRetryingTransactionHelper().doInTransaction(() -> {
-                        fileDocument(docRef, rule);
-                        movedNodes.add(docRef);
-                        return null;
-                    }, false, true);
-                } catch (Exception e) {
-                    LOG.error("Failed to file document " + docRef + " with rule '" + rule.getName() + "'", e);
-                }
-            }
+            });
             return null;
-        });
+        }, true);
     }
 
     @Override
