@@ -351,7 +351,8 @@
 
       <div class="afi-field">
         <label>Inbox Path <span class="required">*</span> <span class="hint">Absolute path to the folder to monitor</span></label>
-        <input type="text" id="afi-f-inboxPath" class="afi-input" placeholder="/Company Home/Inbox"/>
+        <textarea id="afi-f-inboxPath" class="afi-textarea" rows="2"
+                  placeholder="/Company Home/Inbox"></textarea>
       </div>
 
       <div class="afi-field">
