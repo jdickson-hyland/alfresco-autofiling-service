@@ -97,6 +97,16 @@ Unit tests use **JUnit 4 + Mockito 4**. All privileged Alfresco service calls (`
 
 When stubbing a mock that will be passed inside a `.thenReturn()` call, create it as a local variable first — do not call `mockMethod()` inline inside `.thenReturn(...)` as Mockito detects this as unfinished stubbing.
 
+When a service method is wrapped in `RetryingTransactionHelper.doInTransaction`, tests must stub **both** the 2-argument form `(callback, readOnly)` and the 3-argument form `(callback, readOnly, requiresNew)` using `anyBoolean()` matchers, otherwise the callback lambda never executes and `verify(...)` calls will fail with zero interactions. Use this pattern in `setUp()`:
+
+```java
+when(transactionService.getRetryingTransactionHelper()).thenReturn(retryingTransactionHelper);
+when(retryingTransactionHelper.doInTransaction(any(), anyBoolean()))
+    .thenAnswer(inv -> { RetryingTransactionHelper.RetryingTransactionCallback<?> cb = inv.getArgument(0); return cb.execute(); });
+when(retryingTransactionHelper.doInTransaction(any(), anyBoolean(), anyBoolean()))
+    .thenAnswer(inv -> { RetryingTransactionHelper.RetryingTransactionCallback<?> cb = inv.getArgument(0); return cb.execute(); });
+```
+
 ### Share admin console module (`alfresco-autofiling-service-share`)
 
 The Share module provides an admin console UI at `/share/page/hdp/ws/hyland/autofiling/admin` for managing autofiling rules.
@@ -134,3 +144,20 @@ The `webframework.configsource` bean in the slingshot application context must b
 - In the FTL template, emit the raw JSON directly into JS with `${rulesJson!"[]"}` (not `?json_string`, which fails on Rhino objects).
 - To show a hidden div (`display: none` in CSS), use `element.style.display = "block"` — not `""` (empty string removes the inline style and the CSS rule takes over again).
 - API calls from the browser use the Share Surf proxy path `/share/proxy/alfresco/hyland/autofiling/...` — Share forwards these with the current user's credentials automatically.
+
+### Platform log configuration
+
+The platform module ships its own `log4j2.properties` at:
+
+```text
+alfresco-autofiling-service-platform/src/main/resources/alfresco/module/alfresco-autofiling-service-platform/log4j2.properties
+```
+
+It sets INFO as the default level for the entire `org.hyland.com.autofiling` package (INFO includes WARN and ERROR):
+
+```properties
+logger.autofiling.name=org.hyland.com.autofiling
+logger.autofiling.level=INFO
+```
+
+To enable DEBUG logging at runtime without rebuilding, add the same properties to `alfresco-global.properties` or the Docker dev override.
