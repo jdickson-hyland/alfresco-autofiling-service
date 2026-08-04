@@ -1,0 +1,9 @@
+<webscript>
+    <shortname>Update Autofiling Rule</shortname>
+    <description>Updates an existing autofiling rule. Body: AutofilingRule JSON.</description>
+    <url>/alfresco/autofiling/rules/{storeType}/{storeId}/{nodeId}</url>
+    <format default="json">extension</format>
+    <authentication>admin</authentication>
+    <transaction>required</transaction>
+    <family>Autofiling Service</family>
+</webscript>
